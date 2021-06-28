@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Xml;
 using OpenCvSharp;
 
 namespace GestureRecognition
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
             var video = new VideoCapture();
             video.Open(0);
             if (!video.IsOpened())
@@ -16,20 +14,17 @@ namespace GestureRecognition
                 Console.WriteLine("camera open failed.");
                 return;
             }
-            else
-            {
-                Console.WriteLine("camera open success.");
-            }
-            Mat camera = new Mat();
+
+            Console.WriteLine("camera open success.");
+            var camera = new Mat();
+            var grayMat = new Mat();
             while (true)
             {
                 video.Read(camera);
-                if (camera.Empty())
-                {
-                    break;
-                }
-
-                var cameraWindow = new Window("cameraSteam",camera,WindowFlags.AutoSize);
+                if (camera.Empty()) break;
+                Cv2.CvtColor(camera, grayMat, ColorConversionCodes.RGB2BGR);
+                Cv2.Canny(grayMat, camera, 100, 200);
+                var cameraWindow = new Window("cameraSteam", camera, WindowFlags.AutoSize);
                 Cv2.WaitKey(10);
             }
         }
