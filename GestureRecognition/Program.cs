@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using OpenCvSharp;
 
 namespace GestureRecognition
@@ -22,6 +21,7 @@ namespace GestureRecognition
             var camera = new Mat();
             var element = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(3, 3));
             var hull = new List<Point[]>();
+            var hullI = new List<int>();
             while (true)
             {
                 i++;
@@ -29,24 +29,48 @@ namespace GestureRecognition
                 if (camera.Empty()) break;
                 //Cv2.CvtColor(camera, grayMat, ColorConversionCodes.RGB2BGR);
                 //Cv2.Canny(grayMat, camera, 100, 200);
-                Cv2.Flip(camera,camera,FlipMode.Y);
+                Cv2.Flip(camera, camera, FlipMode.Y);
                 var originWindow = new Window("Origin", camera, WindowFlags.AutoSize);
                 var skin = SkinDetect(camera);
                 // skin layer process
-                Cv2.Erode(skin,skin,element,iterations:2);
-                Cv2.MorphologyEx(skin,skin,MorphTypes.Open,element);
-                Cv2.Dilate(skin,skin,element,iterations:1);
-                Cv2.MorphologyEx(skin,skin,MorphTypes.Close,element);
+                Cv2.Erode(skin, skin, element, iterations: 2);
+                Cv2.MorphologyEx(skin, skin, MorphTypes.Open, element);
+                Cv2.Dilate(skin, skin, element, iterations: 1);
+                Cv2.MorphologyEx(skin, skin, MorphTypes.Close, element);
+
 
                 var contours = FindContours(skin);
-                for (int j = 0; j < contours.Length; ++j)
-                {
-                    hull.Add(Cv2.ConvexHull(contours[j]));
-                }
 
                 Cv2.CvtColor(skin, skin, ColorConversionCodes.GRAY2BGR);
                 Cv2.BitwiseAnd(camera, skin, camera);
+
+                foreach (var t in contours)
+                {
+                    hull.Add(Cv2.ConvexHull(t));
+                    OutputArray outArr = OutputArray.Create(hullI);
+                    Cv2.ConvexHull(InputArray.Create(t), outArr, true, false);
+                    var defects = Cv2.ConvexityDefects(t, hullI);
+                    for (var k = 0; k < defects.Length; k++)
+                    {
+                        var start = t[defects[k].Item0];
+                        var end = t[defects[k].Item1];
+                        var far = t[defects[k].Item2];
+
+                        var depth = defects[k].Item3 / 256;
+                        if (depth is > 20 and < 150)
+                        {
+                            Cv2.Line(camera, start, far, Scalar.Green, 2);
+                            Cv2.Line(camera, end, far, Scalar.Green, 2);
+                            Cv2.Circle(camera, start, 6, Scalar.Red);
+                            Cv2.Circle(camera, end, 6, Scalar.Blue);
+                            Cv2.Circle(camera, far, 6, Scalar.Green);
+                        }
+                    }
+                }
+
+
                 Cv2.DrawContours(camera, hull, -1, Scalar.Red);
+                Cv2.DrawContours(camera, contours, -1, Scalar.Blue);
                 var cameraWindow = new Window("Final", camera, WindowFlags.AutoSize);
                 var backgroundWindow = new Window("Skin", skin, WindowFlags.AutoSize);
                 Cv2.WaitKey(10);
@@ -55,6 +79,7 @@ namespace GestureRecognition
                     i = 0;
                     GC.Collect();
                 }
+
                 hull.Clear();
             }
 
