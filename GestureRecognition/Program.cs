@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using MathNet.Numerics.LinearAlgebra;
 using OpenCvSharp;
 
 namespace GestureRecognition
@@ -9,6 +10,7 @@ namespace GestureRecognition
         private static void Main(string[] args)
         {
             var i = 0;
+            var acuteAngle = 0;
             var video = new VideoCapture();
             video.Open(0);
             if (!video.IsOpened())
@@ -60,13 +62,34 @@ namespace GestureRecognition
                         var far = t[defects[k].Item2];
 
                         var depth = defects[k].Item3 / 256;
-                        if (depth is <= 40 or >= 150) continue;
+                        if (depth is <= 40 or >= 150)
+                        {
+                            Console.WriteLine(acuteAngle);
+                            continue;
+                        }
+
                         Cv2.Line(camera, start, far, Scalar.Green, 2);
                         Cv2.Line(camera, end, far, Scalar.Green, 2);
                         Cv2.Circle(camera, start, 6, Scalar.Red);
                         Cv2.Circle(camera, end, 6, Scalar.Blue);
                         Cv2.Circle(camera, far, 6, Scalar.Green);
+                        var vectorBuild = Vector<double>.Build;
+                        var vectorA = vectorBuild.DenseOfArray(new[]
+                            {(double) far.X - start.X, (double) far.Y - start.Y});
+                        var vectorB = vectorBuild.DenseOfArray(new[] {(double) far.X - end.X, (double) far.Y - end.Y});
+                        var ds = vectorA * vectorB;
+                        if (ds / (vectorA.L1Norm() * vectorB.L1Norm()) > 0) acuteAngle++;
                     }
+
+                    if (acuteAngle < 1 && Cv2.ArcLength(t, false) > 1000)
+                        Cv2.PutText(camera, "Rock", t[0], HersheyFonts.HersheyPlain, 2, Scalar.Red);
+                    else if (acuteAngle == 1)
+                        Cv2.PutText(camera, "Scissors", t[0], HersheyFonts.HersheyPlain, 2, Scalar.Red);
+                    else if (acuteAngle > 3)
+                        Cv2.PutText(camera, "Paper", t[0], HersheyFonts.HersheyPlain, 2, Scalar.Red);
+                    else if (Cv2.ArcLength(t, false) > 1000)
+                        Cv2.PutText(camera, "Unknown", t[0], HersheyFonts.HersheyPlain, 2, Scalar.Red);
+                    acuteAngle = 0;
                 }
 
 
