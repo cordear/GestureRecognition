@@ -35,9 +35,12 @@ namespace GestureRecognition
                 // skin layer process
                 Cv2.Erode(skin, skin, element, iterations: 2);
                 Cv2.MorphologyEx(skin, skin, MorphTypes.Open, element);
-                Cv2.Dilate(skin, skin, element, iterations: 1);
+                Cv2.Dilate(skin, skin, element, iterations: 2);
                 Cv2.MorphologyEx(skin, skin, MorphTypes.Close, element);
-
+                Cv2.Dilate(skin, skin, element, iterations: 2);
+                Cv2.MorphologyEx(skin, skin, MorphTypes.Close, element);
+                Cv2.Erode(skin, skin, element, iterations: 2);
+                Cv2.MorphologyEx(skin, skin, MorphTypes.Open, element);
 
                 var contours = FindContours(skin);
 
@@ -57,14 +60,12 @@ namespace GestureRecognition
                         var far = t[defects[k].Item2];
 
                         var depth = defects[k].Item3 / 256;
-                        if (depth is > 20 and < 150)
-                        {
-                            Cv2.Line(camera, start, far, Scalar.Green, 2);
-                            Cv2.Line(camera, end, far, Scalar.Green, 2);
-                            Cv2.Circle(camera, start, 6, Scalar.Red);
-                            Cv2.Circle(camera, end, 6, Scalar.Blue);
-                            Cv2.Circle(camera, far, 6, Scalar.Green);
-                        }
+                        if (depth is <= 40 or >= 150) continue;
+                        Cv2.Line(camera, start, far, Scalar.Green, 2);
+                        Cv2.Line(camera, end, far, Scalar.Green, 2);
+                        Cv2.Circle(camera, start, 6, Scalar.Red);
+                        Cv2.Circle(camera, end, 6, Scalar.Blue);
+                        Cv2.Circle(camera, far, 6, Scalar.Green);
                     }
                 }
 
